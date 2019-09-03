@@ -33,15 +33,12 @@ func main() {
 	for _, pkg := range pkgs {
 		for _, syntax := range pkg.Syntax {
 			ast.Inspect(syntax, func(node ast.Node) bool {
-				switch node.(type) {
+				switch node := node.(type) {
 				case *ast.ImportSpec:
-					// imports
-					imp := node.(*ast.ImportSpec)
-					log.Printf("import %s as %s", imp.Path.Value, imp.Name)
+					log.Printf("import %s as %s", node.Path.Value, node.Name)
 
 				case *ast.CallExpr:
-					call := node.(*ast.CallExpr)
-					switch fun := call.Fun.(type) {
+					switch fun := node.Fun.(type) {
 					case *ast.SelectorExpr:
 						switch x := fun.X.(type) {
 						case *ast.Ident:
@@ -49,7 +46,7 @@ func main() {
 							case *types.PkgName:
 								// print the function call
 								path := o.Imported().Path()
-								log.Printf("call %s.%s with %d arg(s)", path, fun.Sel, len(call.Args))
+								log.Printf("call %s.%s with %d arg(s)", path, fun.Sel, len(node.Args))
 
 								// mutate the function call
 								if path == "github.com/pkg/errors" {
