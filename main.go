@@ -40,13 +40,22 @@ func main() {
 
 				case *ast.CallExpr:
 					call := node.(*ast.CallExpr)
-					switch call.Fun.(type) {
+					switch fun := call.Fun.(type) {
 					case *ast.SelectorExpr:
-						// package function call
-						fun := call.Fun.(*ast.SelectorExpr)
-						log.Printf("call %s.%s with %d arg(s)", fun.X, fun.Sel, len(call.Args))
+						switch x := fun.X.(type) {
+						case *ast.Ident:
+							// print the function call
+							log.Printf("call %s.%s with %d arg(s)", x, fun.Sel, len(call.Args))
+
+							// mutate the function call
+							if x.Name == "errors" {
+								x.Name = "xerrors"
+							}
+						default:
+							log.Printf("unknown type of call.Fun.X: %T", fun)
+						}
 					default:
-						log.Printf("call %T", call.Fun)
+						log.Printf("unknown type of call.Fun: %T", fun)
 					}
 				}
 				return true
