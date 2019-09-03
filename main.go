@@ -3,6 +3,7 @@ package main
 import (
 	"go/ast"
 	"go/printer"
+	"go/types"
 	"log"
 	"os"
 
@@ -44,12 +45,18 @@ func main() {
 					case *ast.SelectorExpr:
 						switch x := fun.X.(type) {
 						case *ast.Ident:
-							// print the function call
-							log.Printf("call %s.%s with %d arg(s)", x, fun.Sel, len(call.Args))
+							switch o := pkg.TypesInfo.ObjectOf(x).(type) {
+							case *types.PkgName:
+								// print the function call
+								path := o.Imported().Path()
+								log.Printf("call %s.%s with %d arg(s)", path, fun.Sel, len(call.Args))
 
-							// mutate the function call
-							if x.Name == "errors" {
-								x.Name = "xerrors"
+								// mutate the function call
+								if path == "github.com/pkg/errors" {
+									x.Name = "xerrors"
+								}
+							default:
+								log.Printf("unknown object of call.Fun.X: %T", o)
 							}
 						default:
 							log.Printf("unknown type of call.Fun.X: %T", fun)
