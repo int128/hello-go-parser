@@ -2,26 +2,31 @@ package main
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/printer"
-	"go/token"
 	"log"
 	"os"
+
+	"golang.org/x/tools/go/packages"
 )
 
 func main() {
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, "testdata/", nil, parser.ParseComments)
+	config := &packages.Config{
+		Mode: packages.NeedCompiledGoFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
+	}
+	pkgs, err := packages.Load(config, os.Args[1:]...)
 	if err != nil {
-		log.Fatalf("could not parse: %s", err)
+		log.Fatalf("could not load packages: %s", err)
+	}
+	if packages.PrintErrors(pkgs) > 0 {
+		log.Fatalf("error occurred")
 	}
 
-	// just print sources
 	for _, pkg := range pkgs {
-		log.Printf("package=%s", pkg.Name)
-		for name, f := range pkg.Files {
-			log.Printf("file=%s", name)
-			if err := printer.Fprint(os.Stdout, fset, f); err != nil {
+		log.Printf("package %s", pkg.ID)
+		log.Printf("files %+v", pkg.CompiledGoFiles)
+		for _, syntax := range pkg.Syntax {
+			log.Printf("file=%s", syntax.Name)
+			if err := printer.Fprint(os.Stdout, pkg.Fset, syntax); err != nil {
 				log.Printf("could not print the source: %s", err)
 			}
 		}
@@ -29,11 +34,8 @@ func main() {
 
 	// print AST nodes
 	for _, pkg := range pkgs {
-		log.Printf("package=%s", pkg.Name)
-		for name, f := range pkg.Files {
-			log.Printf("file=%s", name)
-
-			ast.Inspect(f, func(node ast.Node) bool {
+		for _, syntax := range pkg.Syntax {
+			ast.Inspect(syntax, func(node ast.Node) bool {
 				//if err := ast.Print(fset, node); err != nil {
 				//	log.Printf("could not print the node: %s", err)
 				//}
